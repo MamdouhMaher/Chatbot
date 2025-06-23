@@ -2,13 +2,17 @@ import nltk
 from nltk.stem import WordNetLemmatizer
 import numpy as np
 import re
+import os
 
 lemmatizer = WordNetLemmatizer()
+
+# Add your custom nltk_data path if you uploaded it
+nltk.data.path.append(os.path.join(os.path.dirname(__file__), "nltk_data"))
 
 try:
     nltk.data.find('tokenizers/punkt')
 except LookupError:
-    nltk.download('punkt')
+    nltk.download('punkt', download_dir=os.path.join(os.path.dirname(__file__), "nltk_data"))
 
 def clean_text(text, language="en"):
     text = text.lower().strip()
@@ -32,3 +36,4 @@ def bag_of_words(tokens, words, language="en"):
             if word == w:
                 bag[i] = 1
     return np.array(bag)
+
