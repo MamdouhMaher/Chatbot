@@ -19,7 +19,7 @@ class WorkspaceChatbot:
         # Intent patterns for all questions
         intent_patterns = {
             # Workingspaces
-            "find_workspace_by_location": [
+            "find_workspace_by_address": [
                 r"مساحات.*متاحة.*(القاهرة|cairo|تجمع|tagamoa|جيزة|giza|شيخ زايد|sheikh zayed|أكتوبر|october|معادي|maadi)",
                 r"available.*(cairo|tagamoa|giza|sheikh zayed|october|maadi)",
                 r"open spaces.*(tagamoa|sheikh zayed)",
@@ -48,7 +48,7 @@ class WorkspaceChatbot:
             "bookings_tomorrow": [r"حجوزات.*بكرة|bookings.*tomorrow"],
 
             # Users
-            "users_from_location": [r"مستخدم.*(جيزة|giza|القاهرة|cairo)", r"users.*(giza|cairo)"],
+            "users_from_address": [r"مستخدم.*(جيزة|giza|القاهرة|cairo)", r"users.*(giza|cairo)"],
             "get_user_email": [r"إيميل.*أحمد محمد|email.*ahmed mohamed"],
             "user_stats": [r"عدد المستخدمين|total.*users", r"female users|بنت.*مسجلين", r"users.*no bookings"],
             "new_users_week": [r"مسجلين.*الأسبوع|new users.*week"],
@@ -72,7 +72,7 @@ class WorkspaceChatbot:
             "hourly_rate": [r"سعر.*الساعة|hourly rate"],
             "price_policy": [r"سياسات.*الدفع|price policy"],
             "extra_fees": [r"رسوم.*إضافية|extra fees"],
-            "price_by_location": [r"أسعار.*موقع|price.*location"],
+            "price_by_address": [r"أسعار.*موقع|price.*location"],
             "payment_methods": [r"دفع.*كاش|دفع.*إلكتروني|credit card|payment methods"],
             "monthly_plans": [r"باقات.*شهرية|monthly plans"],
             "last_payment": [r"دفعت.*آخر|last payment"],
@@ -108,7 +108,7 @@ class WorkspaceChatbot:
         # Location
         for loc_ar, loc_en in location_map.items():
             if loc_ar in message or loc_en in message:
-                entities["location"] = loc_en  # Use English for consistency in queries
+                entities["address"] = loc_en  
                 break
 
         # Price
@@ -148,26 +148,26 @@ class WorkspaceChatbot:
         return entities
 
     def handle_cheapest_workspace(self, entities, language="en"):
-        location = entities.get("location", "cairo")  # Default to Cairo
-        query = {"location": {"$regex": location, "$options": "i"}, "availability": True}
+        address = entities.get("address", "cairo")  
+        query = {"address": {"$regex": address, "$options": "i"}, "availability": True}
         print(f"[Debug] Cheapest workspace query: {query}")
-        workspaces = list(db["workingspaces"].find(query))  # Convert to list
+        workspaces = list(db["workingspaces"].find(query))  
         print(f"[Debug] Cheapest workspace results: {workspaces}")
         if workspaces:
             cheapest = min(workspaces, key=lambda x: x.get("price", float('inf')))
-            return f"The cheapest workspace in {location.capitalize()} is {cheapest['name']} at {cheapest['price']} EGP." if language == "en" else f"أرخص مساحة في {location.capitalize()} هي {cheapest['name']} بـ {cheapest['price']} جنيه."
-        return f"No available workspaces found in {location.capitalize()}." if language == "en" else f"لا توجد مساحات متاحة في {location.capitalize()}."
+            return f"The cheapest workspace in {address.capitalize()} is {cheapest['name']} at {cheapest['price']} EGP." if language == "en" else f"أرخص مساحة في {address.capitalize()} هي {cheapest['name']} بـ {cheapest['price']} جنيه."
+        return f"No available workspaces found in {address.capitalize()}." if language == "en" else f"لا توجد مساحات متاحة في {address.capitalize()}."
 
     def handle_workspaces_with_projector(self, entities, language="en"):
         query = {"availability": True}
-        if "location" in entities:
-            query["location"] = {"$regex": entities["location"], "$options": "i"}
+        if "address" in entities:
+            query["address"] = {"$regex": entities["address"], "$options": "i"}
         query["features"] = {"$regex": "projector", "$options": "i"}
         print(f"[Debug] Workspaces with projector query: {query}")
-        results = list(db["workingspaces"].find(query).limit(5))  # Convert to list
+        results = list(db["workingspaces"].find(query).limit(5))  
         print(f"[Debug] Workspaces with projector results: {results}")
-        response = [f"- {r['name']} (Location: {r['location']})" for r in results]
-        return "\n".join(response) or (f"No workspaces with projector available in {entities.get('location', 'the area').capitalize()}." if language == "en" else f"لا توجد مساحات بها بروجكتور في {entities.get('location', 'المنطقة').capitalize()}.")
+        response = [f"- {r['name']} (address: {r['address']})" for r in results]
+        return "\n".join(response) or (f"No workspaces with projector available in {entities.get('address', 'the area').capitalize()}." if language == "en" else f"لا توجد مساحات بها بروجكتور في {entities.get('address', 'المنطقة').capitalize()}.")
 
     def handle_query(self, message, language="en"):
         try:
@@ -179,27 +179,27 @@ class WorkspaceChatbot:
                 if "cheapest" in message.lower() or "أرخص" in message:
                     return self.handle_cheapest_workspace(entities, language)
                 elif "available" in message.lower() or "متاحة" in message:
-                    location = entities.get("location", "cairo")
-                    query = {"location": {"$regex": location, "$options": "i"}, "availability": True}
+                    address = entities.get("address", "cairo")
+                    query = {"address": {"$regex": address, "$options": "i"}, "availability": True}
                     print(f"[Debug] Available workspaces query: {query}")
                     workspaces = list(db["workingspaces"].find(query))
                     print(f"[Debug] Available workspaces results: {workspaces}")
                     count = len(workspaces)
                     if count > 0:
                         names = [w["name"] for w in workspaces]
-                        return f"Available workspaces in {location.capitalize()} are: {', '.join(names)}." if language == "en" else f"المساحات المتاحة في {location.capitalize()} هي: {', '.join(names)}."
-                    return f"No available workspaces found in {location.capitalize()}." if language == "en" else f"لا توجد مساحات متاحة في {location.capitalize()}."
-                return None  # Trigger ML model fallback for unknown intents
+                        return f"Available workspaces in {address.capitalize()} are: {', '.join(names)}." if language == "en" else f"المساحات المتاحة في {address.capitalize()} هي: {', '.join(names)}."
+                    return f"No available workspaces found in {address.capitalize()}." if language == "en" else f"لا توجد مساحات متاحة في {address.capitalize()}."
+                return None  
 
             # Workingspaces
-            if intent == "find_workspace_by_location":
+            if intent == "find_workspace_by_address":
                 query = {"availability": True}
-                if "location" in entities:
-                    query["location"] = {"$regex": entities["location"], "$options": "i"}
-                print(f"[Debug] Find by location query: {query}")
+                if "address" in entities:
+                    query["address"] = {"$regex": entities["address"], "$options": "i"}
+                print(f"[Debug] Find by address query: {query}")
                 results = list(db["workingspaces"].find(query).limit(5))
-                print(f"[Debug] Find by location results: {results}")
-                response = [f"- {r.get('name')} (Location: {r.get('location')}, Capacity: {r.get('capacity')})" for r in results]
+                print(f"[Debug] Find by address results: {results}")
+                response = [f"- {r.get('name')} (address: {r.get('address')}, Capacity: {r.get('capacity')})" for r in results]
                 return "\n".join(response) or ("No available workspaces found." if language == "en" else "لا توجد مساحات متاحة.")
 
             elif intent == "get_cheapest_workspace":
@@ -217,7 +217,7 @@ class WorkspaceChatbot:
             elif intent == "shared_workspaces":
                 query = {"type": "shared", "availability": True}
                 if "location" in entities:
-                    query["location"] = {"$regex": entities["location"], "$options": "i"}
+                    query["address"] = {"$regex": entities["address"], "$options": "i"}
                 print(f"[Debug] Shared workspaces query: {query}")
                 results = list(db["workingspaces"].find(query).limit(5))
                 print(f"[Debug] Shared workspaces results: {results}")
@@ -227,7 +227,7 @@ class WorkspaceChatbot:
             elif intent == "workspace_with_wifi":
                 results = list(db["workingspaces"].find({"features": {"$regex": "wifi", "$options": "i"}, "availability": True}).limit(5))
                 print(f"[Debug] Wi-Fi workspaces results: {results}")
-                response = [f"- {r['name']} (Location: {r['location']})" for r in results]
+                response = [f"- {r['name']} (address: {r['address']})" for r in results]
                 return "\n".join(response) or ("No workspaces with Wi-Fi available." if language == "en" else "لا توجد مساحات بها واي فاي.")
 
             elif intent == "book_workspace":
@@ -235,8 +235,8 @@ class WorkspaceChatbot:
                 query = {"availability": True}
                 if workspace_name != "any":
                     query["name"] = {"$regex": workspace_name, "$options": "i"}
-                elif "location" in entities:
-                    query["location"] = {"$regex": entities["location"], "$options": "i"}
+                elif "address" in entities:
+                    query["address"] = {"$regex": entities["address"], "$options": "i"}
                 print(f"[Debug] Book workspace query: {query}")
                 workspace = db["workingspaces"].find_one(query)
                 if workspace:
@@ -253,12 +253,12 @@ class WorkspaceChatbot:
 
             elif intent == "private_space":
                 query = {"type": "private", "availability": True}
-                if "location" in entities:
-                    query["location"] = {"$regex": entities["location"], "$options": "i"}
+                if "address" in entities:
+                    query["address"] = {"$regex": entities["address"], "$options": "i"}
                 print(f"[Debug] Private space query: {query}")
                 results = list(db["workingspaces"].find(query).limit(5))
                 print(f"[Debug] Private space results: {results}")
-                response = [f"- {r['name']} (Location: {r['location']}, Capacity: {r['capacity']})" for r in results]
+                response = [f"- {r['name']} (address: {r['address']}, Capacity: {r['capacity']})" for r in results]
                 return "\n".join(response) or ("No private workspaces available." if language == "en" else "لا توجد مساحات خاصة متاحة.")
 
             elif intent == "workspaces_with_projector":
@@ -268,10 +268,10 @@ class WorkspaceChatbot:
                 next_friday = self.current_date + timedelta(days=(4 - self.current_date.weekday() + 7) % 7)
                 results = list(db["workingspaces"].find({"availability": True}).limit(5))
                 print(f"[Debug] Friday spaces results: {results}")
-                response = [f"- {r['name']} (Location: {r['location']})" for r in results]
+                response = [f"- {r['name']} (address: {r['address']})" for r in results]
                 return "\n".join(response) or ("No workspaces available on Friday." if language == "en" else "لا توجد مساحات متاحة يوم الجمعة.")
 
-            # Reservations (remaining intents can be similarly refactored into functions if needed)
+            # Reservations 
             elif intent == "bookings_today":
                 count = db["reservations"].count_documents({"booking_date": {"$gte": self.current_date, "$lt": self.current_date + timedelta(days=1)}})
                 return f"Number of bookings today: {count}." if language == "en" else f"عدد الحجوزات اليوم: {count}."
@@ -287,14 +287,14 @@ class WorkspaceChatbot:
                 user = result["user"][0]
                 return f"Most active user: {user['name']} ({result['count']} bookings)." if language == "en" else f"أكثر مستخدم حجز: {user['name']} ({result['count']} حجوزات)."
 
-            # Add other intents as needed with similar refactoring
+            
 
             else:
                 return "Sorry, I didn't understand your request." if language == "en" else "عذرًا، لم أفهم سؤالك. حاول مرة أخرى."
 
         except Exception as e:
             print(f"Error in handle_query: {e}")
-            return None  # Allow fallback to ML model
+            return None  
 
 # Example Usage
 if __name__ == "__main__":
