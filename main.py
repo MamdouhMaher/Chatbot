@@ -125,9 +125,9 @@ def save_chat_to_db(user_message, bot_response, source, language):
     except Exception as e:
         logging.error(f"Error saving to chat history: {e}")
 
-@app.get("/", response_class=HTMLResponse, tags=["Frontend"])
-async def chat_page(request: Request):
-    return templates.TemplateResponse("chat.html", {"request": request})
+#@app.get("/", response_class=HTMLResponse, tags=["Frontend"])
+#async def chat_page(request: Request):
+    #return templates.TemplateResponse("chat.html", {"request": request})
 
 @app.post("/api/chat", tags=["API"])
 async def chat_endpoint(chat_request: ChatRequest):
